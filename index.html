@@ -1,0 +1,167 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"> 
+<head> 
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+<title>DataViz - Bar Charts</title> 
+ 
+<!-- CSS Files --> 
+<link type="text/css" href="css/base.css" rel="stylesheet" /> 
+<link type="text/css" href="css/BarChart.css" rel="stylesheet" /> 
+ 
+<!--[if IE]><script language="javascript" type="text/javascript">alert("This browser is not supported. Please use firefox/Google Chrome/Safari.");</script><![endif]--> 
+ 
+<!-- JIT Library File --> 
+<script language="javascript" type="text/javascript" src="js/jit-yc.js"></script> 
+ 
+<!-- Example File --> 
+<script language="javascript" type="text/javascript" src="js/bar-chart.js"></script>
+<script language="javascript" type="text/javascript" src="js/protovis-d3.2.js"></script>
+<script language="javascript" type="text/javascript" src="js/yearcount.js"></script>
+<script language="javascript" type="text/javascript" src="js/raphael.js"></script>
+<script language="javascript" type="text/javascript" src="js/g.raphael-min.js"></script>
+<script language="javascript" type="text/javascript" src="js/g.bar-min.js"></script>
+ 
+<script language="javascript" type="text/javascript">
+	function raphaelChart() {
+		var r = Raphael("inside-left-container"),
+                    fin = function () {
+                        this.flag = r.g.popup(this.bar.x, this.bar.y, this.bar.value || "0").insertBefore(this);
+                    },
+                    fout = function () {
+                        this.flag.animate({opacity: 0}, 300, function () {this.remove();});
+                    },
+                    fin2 = function () {
+                        var y = [], res = [];
+                        for (var i = this.bars.length; i--;) {
+                            y.push(this.bars[i].y);
+                            res.push(this.bars[i].value || "0");
+                        }
+                        this.flag = r.g.popup(this.bars[0].x, Math.min.apply(Math, y), res.join(", ")).insertBefore(this);
+                    },
+                    fout2 = function () {
+                        this.flag.animate({opacity: 0}, 300, function () {this.remove();});
+                    };
+                //r.g.txtattr.font = "14px 'Arial'";
+                
+                //r.g.text(160, 15, "Overview of North American payments landscape");
+                
+                var c = r.g.barchart(10, 10, 300, 300, [[20, 30, 38, 58], [5, 10, 20, 10], [15, 45, 35, 35]], {stacked: true, type: "square", colors: ["#8db4da", "#b4cde7", "#dae6f3"]}).hoverColumn(fin2, fout2);
+				var axis = r.g.axis(55,310,280,null,null,4,2,["2003",  "2004", "2005", "2006"], "|", 0);
+                axis.text.attr({font:"11px Arial", "font-weight": "bold", "fill": "#333333"});
+                // c.bars[1].attr({stroke: "#000"});
+            
+	}
+
+	
+	function loadCharts() {
+		
+		raphaelChart();
+		init();
+		//initProto();
+	}
+	</script>
+<script type="text/javascript+protovis"> 
+/* Extract the unique dates, departments and types. */
+var dates = pv.uniq(headcount, function(d) d.date),
+    depts = pv.uniq(headcount, function(d) d.dept),
+    types = pv.uniq(headcount, function(d) d.type);
+ 
+/* Build a map of headcounts by date > dept > type. */
+var count = pv.nest(headcount)
+    .key(function(d) d.date)
+    .key(function(d) d.dept)
+    .key(function(d) d.type)
+    .rollup(function(v) v[0].headcount);
+ 
+ 
+/* Compute the maximum stack height using sum(types | date + dept). */
+var max = pv.max(dates,
+    function(q) pv.max(depts,
+    function(d) pv.sum(types,
+    function(t) count[q][d][t])));
+ 
+var w = 250,
+    h = 294,
+    x1 = pv.Scale.ordinal(dates).splitBanded(0, w, .8),
+	x2 = pv.Scale.ordinal(depts).splitBanded(0, x1.range().band, .9),
+    y = pv.Scale.linear(0, max).range(0, h);
+ 
+var vis = new pv.Panel().canvas('inside-right-container')
+    .width(w)
+    .height(h)
+    .bottom(20)
+    .left(25)
+    .right(5)
+    .top(5);
+
+
+var bar = vis.add(pv.Panel)
+    .data(dates)
+    .left(x1)
+  .add(pv.Layout.Stack)
+    .layers(types)
+    .values(depts)
+    .x(x2)
+    .y(function(d, t, q) y(count[q][d][t]))
+  .layer.add(pv.Bar)
+    .width(x2.range().band)
+    .title(function(d, t, q) + count[q][d][t])
+    .fillStyle(pv.Colors.category20().by(function(d, t) d + t).range('#8db4da', '#b4cde7', '#dae6f3'));
+
+
+ 
+vis.add(pv.Label)
+    .data(dates)
+    .bottom(0)
+    .left(function(d) x1(d) + x1.range().band / 3)
+    .textMargin(5)
+    .textBaseline("top")
+    .textAlign("center")
+    .text(pv.Format.date("%y"));
+ 
+
+vis.add(pv.Rule)
+    .data(y.ticks())
+    .bottom(y)
+    .strokeStyle(function(d) d ? "rgba(255, 255, 255, .3)" : "#fff")
+
+ 
+vis.render();
+</script>  
+
+</head> 
+ 
+<body onload="loadCharts();"> 
+<div id="container"> 
+	<div id="left-container">
+		<div class="chart-title">Overview of North American payments landscape</div>
+		<div class="chart-units">USD, millions</div>
+		
+		<div id="inside-left-container">
+				
+		</div>
+		<h3 align="center">gRaphael</h3>
+		 
+	</div> 
+	<div id="center-container">
+		<div class="chart-title">Overview of North American payments landscape</div>
+		<div class="chart-units">USD, millions</div> 
+    	<div id="infovis">
+    	
+    	</div>
+		<h3 align="center">InfoVis</h3>    
+	</div> 
+ 
+	<div id="right-container">
+		<div class="chart-title">Overview of North American payments landscape</div>
+		<div class="chart-units">USD, millions</div> 
+		<div id='inside-right-container'>
+			
+		</div>
+		 <h3 align="center">ProtoVis</h3>
+	</div>  
+	<div class="clear"></div>
+</div> 
+</body> 
+</html> 
